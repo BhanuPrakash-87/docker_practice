@@ -1,0 +1,74 @@
+echo "Git Choice Menu"
+echo "-------------------------------------------------------"
+echo "Press 1 - For Cloning the Repo"
+echo "Press 2 - For exiting"
+echo "-------------------------------------------------------"
+                                    
+read user_choice
+case $user_choice in
+	1)
+		echo "Enter the git repo URL...";
+		read git_url;
+
+		echo "removing any existing git repositories with same repository name...";
+		sub1="${git_url##*/}";
+		sub2="${sub1%.*}";
+
+		echo $sub2" git existing repo will be removed...";
+		rm -rf $sub2;
+
+		echo "cloning git repository...";
+		git clone $git_url;
+		if [ $? -eq 0 ]
+		then
+		echo -e "\nClone was successful, Enjoy your Day. \n";
+		else
+		echo -e "\nEither URL is invalid, or you've already cloned it here. \n";
+		fi;;
+	2)
+		echo "Exiting from shell script...";
+		flag=0;
+		exit 0;
+esac
+
+echo "stopping all running containers..."
+docker stop $(docker ps -a -q)
+
+echo "removing all local images and containers..."
+docker system prune -af
+
+echo "Change to git repository, cd "$sub2
+cd $sub2
+
+echo "Enter new docker image name..."
+read image_name
+
+echo "Executing docker build with image name "$image_name
+docker build -t $image_name .
+
+echo "Logging in into docker hub..."
+echo "Enter docker user name..."
+read docker_user_name
+
+echo "Enter docker token..."
+read docker_token
+docker login -u $docker_user_name -p $docker_token
+
+echo "Tag new image to docker hub..."
+docker tag $image_name:latest $docker_user_name/9mar2025:$image_name
+
+echo "Push new image to docker hub..."
+docker push $docker_user_name/9mar2025:$image_name
+
+echo "Removing all local images..."
+docker rmi -f $(docker image ls -a -q)
+
+echo "Pulling image from docker hub..."
+docker pull $docker_user_name/9mar2025:$image_name
+
+echo "Enter new docker container name..."
+read container_name
+echo "Executing docker run with container name "$container_name
+docker run -itd --name $container_name -p 8080:80 $docker_user_name/9mar2025:$image_name
+
+echo "All executions completed successfully"
